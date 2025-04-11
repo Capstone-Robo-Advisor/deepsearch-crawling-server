@@ -1,0 +1,51 @@
+name: Deploy Deepsearch Crawler to EC2
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Connect and deploy to EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "🔁 [$(date)] 배포 시작"
+
+            # 1. 디렉토리 없으면 clone, 있으면 pull
+            if [ ! -d "/home/ubuntu/deepsearch-crawling-server" ]; then
+              git clone https://github.com/Capstone-Robo-Advisor/deepsearch-crawling-server.git /home/ubuntu/deepsearch-crawling-server
+            else
+              cd /home/ubuntu/deepsearch-crawling-server
+              git fetch origin main
+              git reset --hard origin/main
+              git clean -fd
+            fi
+
+            cd /home/ubuntu/deepsearch-crawling-server
+
+            # 2. Docker 빌드
+            docker build -t deepsearch-crawler:latest .
+
+            # 3. 실행 스크립트 생성 또는 갱신
+            cat > /home/ubuntu/run-deepsearch.sh << 'EOL'
+            #!/bin/bash
+            LOG_FILE="/var/log/deepsearch/deepsearch-$(date +\%Y-\%m-\%d).log"
+            echo "🟢 실행 시작 at \$(date)" >> $LOG_FILE
+            docker run --rm --env-file /home/ubuntu/deepsearch.env deepsearch-crawler:latest >> $LOG_FILE 2>&1
+            echo "🔚 실행 완료 at \$(date)" >> $LOG_FILE
+            EOL
+
+            chmod +x /home/ubuntu/run-deepsearch.sh
+
+            # 4. 로그 디렉토리 생성
+            mkdir -p /var/log/deepsearch
+
+            echo "✅ 배포 완료 [$(date)]"
