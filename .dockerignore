@@ -10,7 +10,7 @@ env/
 venv/
 
 # 환경파일
-.env
+deepsearch.env
 
 # Git 관련
 .git

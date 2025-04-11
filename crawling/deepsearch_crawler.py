@@ -11,9 +11,14 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # Load API key and MongoDB URI
-load_dotenv()
+load_dotenv(dotenv_path="../deepsearch.env")
 API_KEY = os.getenv("DEEPSEARCH_CRAWLER_API_KEY")
 MONGO_URI = os.getenv("MONGODB_URI")
+
+if not API_KEY:
+    logger.error("❌ 환경변수에서 DEEPSEARCH_CRAWLER_API_KEY를 불러오지 못했습니다.")
+if not MONGO_URI:
+    logger.error("❌ 환경변수에서 MONGODB_URI를 불러오지 못했습니다.")
 
 # Connect to MongoDB
 client = MongoClient(MONGO_URI)
